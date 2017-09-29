@@ -1,0 +1,16 @@
+[package]
+name = "iarmap"
+version = "0.1.0"
+authors = ["Ian McIntyre <me@ianpmcintyre.com>"]
+
+[dependencies.nom]
+version = "3.2.0"
+features = ["nightly", "verbose-errors"]
+
+[lib]
+name = "iarmap"
+path = "src/lib.rs"
+
+[[bin]]
+name = "iarmapcmp"
+path = "bin/main.rs"
