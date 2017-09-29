@@ -1,5 +1,7 @@
 # `iarmapcmp`
 
+[![Build Status](https://travis-ci.org/IQ-Inc/iarmap.svg?branch=master)](https://travis-ci.org/IQ-Inc/iarmap)
+
 A command-line program to compare two IAR EW map files, and a library for parsing the module summary sections from the map files. This repository has no affiliation with IAR.
 
 ### Usage
