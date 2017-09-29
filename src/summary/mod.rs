@@ -101,6 +101,7 @@ named!(pub parse_module_summaries< &[u8], Vec<ObjModuleTable> >,
 mod tests {
 
     use super::*;
+    use nom::IResult;
     use nom::IResult::Done;
 
     static EMPTY: &[u8] = b"";
@@ -239,6 +240,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused_variables)]
     fn test_parse_until_header() {
         let input = "
 Here's some other content we don't care about...
@@ -250,7 +252,7 @@ but we just ramble here to simulate that 'other content.'
 ***"
             .as_bytes();
 
-        let result = many_till!(input, anychar, header);
+        let result: IResult<_, _> = many_till!(input, anychar, header);
         assert_eq!(result.is_done(), true);
         assert_eq!(result.remaining_input().unwrap(), EMPTY);
     }

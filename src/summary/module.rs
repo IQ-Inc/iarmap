@@ -138,7 +138,7 @@ fn namep(input: &[u8]) -> IResult<&[u8], Option<String>> {
             if name.chars().filter(|c| c == &'-').count() == MODULE_NAME_MAX_BYTES {
                 // Force a backtrack if a table end is detected...
                 // This is inefficient, but it gets the job done.
-                IResult::Error(Err::Code(ErrorKind::Custom(99)))
+                IResult::Error(ErrorKind::Custom(99))
             } else {
                 IResult::Done(rest, Some(name))
             }
@@ -200,19 +200,20 @@ named!(size_ro_code_ro_data_rw_data<&[u8], Module>,
 fn _size_rowp<'a>(input: &'a [u8], sizes: &[u8]) -> IResult<&'a [u8], Module> {
     let len = sizes.len();
 
-    let parser: &Fn(&[u8]) -> IResult<&[u8], Module> = if len == RO_CODE {
-        &size_ro_code
+    let parser: fn(&[u8]) -> IResult<&[u8], Module> =
+    if len == RO_CODE {
+        size_ro_code
     } else if len == RO_CODE_RO_DATA {
-        &size_ro_code_ro_data
+        size_ro_code_ro_data
     } else if len == RO_CODE_RO_DATA_RW_DATA {
-        &size_ro_code_ro_data_rw_data
+        size_ro_code_ro_data_rw_data
     } else {
-        return IResult::Error(::nom::Err::Code(ErrorKind::Custom(0)));
+        return IResult::Error(ErrorKind::Custom(0));
     };
 
     match parser(&sizes) {
         IResult::Done(_, module) => IResult::Done(input, module),
-        _ => IResult::Error(::nom::Err::Code(ErrorKind::Custom(0))),
+        _ => IResult::Error(ErrorKind::Custom(0)),
     }
 }
 
