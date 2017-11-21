@@ -49,11 +49,16 @@ named!(
 
 /// Parses the table start. Consumes the table start and returns empty bytes.
 named!(
-    table_start,
+    table_start<usize>,
     do_parse!(
-        multispace >> tag!("Module") >> multispace >> tag!("ro code") >> space >>
-            tag!("ro data") >> space >> tag!("rw data") >> line_ending >>
-            take_while!(|x| (x == ' ' as u8) || (x == '-' as u8)) >> (b"")
+        nbytes: do_parse!(
+            leading: multispace >>
+            tag!("Module") >>
+            trailing: multispace >>
+            (leading.len() + trailing.len() + "Module".len())) >>
+        tag!("ro code") >> space >>
+        tag!("ro data") >> space >> tag!("rw data") >> line_ending >>
+        take_while!(|x| (x == ' ' as u8) || (x == '-' as u8)) >> (nbytes)
     )
 );
 
@@ -76,22 +81,22 @@ named!(table_end,
 );
 
 /// Parse module tables
-named!(tablep< &[u8], ObjModuleTable>,
-    do_parse!(
+fn tablep(input: &[u8], nbytes: usize) -> IResult<&[u8], ObjModuleTable> {
+    do_parse!(input,
         obj: obj_header >>
-        ms: module_table >>
+        ms: apply!(module_table, nbytes) >>
         table_end >>
         take_until_and_consume!("\n") >>
         (ObjModuleTable{ name: obj, table: ms })
     )
-);
+}
 
 /// Parse the module summary table from an IAR map file
 named!(pub parse_module_summaries< &[u8], Vec<ObjModuleTable> >,
     do_parse!(
-        many_till!(anychar, header) >>
-        table_start >> line_ending >>
-        ts: many0!(do_parse!(t: tablep >> multispace >> (t))) >>
+        many_till!(anychar, header) >> line_ending >> line_ending >>
+        nbytes: table_start >> line_ending >>
+        ts: many0!(do_parse!(t: apply!(tablep, nbytes) >> multispace >> (t))) >>
         take_until!("*") >>
         (ts)
     )
@@ -122,7 +127,7 @@ mod tests {
     ------                         -------  -------  -------"
             .as_bytes();
 
-        assert_eq!(table_start(h), Done(EMPTY, EMPTY));
+        assert_eq!(table_start(h), Done(EMPTY, 35));
     }
 
     #[test]
@@ -165,7 +170,7 @@ mod tests {
             },
         );
 
-        let result = module_table(table);
+        let result = module_table(table, 35);
         assert_eq!(result, IResult::Done(&rest[..], expected));
     }
 
@@ -176,7 +181,7 @@ mod tests {
     Total:\n"
             .as_bytes();
         let expected_map: HashMap<String, Module> = HashMap::new();
-        let result = tablep(input);
+        let result = tablep(input, 35);
         assert_eq!(result, IResult::Done(EMPTY, ObjModuleTable{ name: "command line: [2]".into(), table: expected_map }));
     }
 
@@ -231,7 +236,7 @@ mod tests {
 
         let expected_obj_name: String = "myarchive.a: [6]".into();
 
-        let result = tablep(table);
+        let result = tablep(table, 35);
         if let &Done(remaining, _) = &result {
             println!("{}", str::from_utf8(remaining).unwrap());
         }
@@ -283,7 +288,7 @@ Entry                      Address    Size  Type      Object
 
         named!(p< &[u8], ObjModuleTable>,
             do_parse!(
-                ts: tablep >>
+                ts: apply!(tablep, 35) >>
                 take_until!("*") >>
                 (ts)
             )
