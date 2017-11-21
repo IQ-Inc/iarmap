@@ -95,7 +95,7 @@ fn tablep(input: &[u8], nbytes: usize) -> IResult<&[u8], ObjModuleTable> {
 named!(pub parse_module_summaries< &[u8], Vec<ObjModuleTable> >,
     do_parse!(
         many_till!(anychar, header) >> line_ending >> line_ending >>
-        nbytes: tap!(n: table_start => { println!("nbytes {}", n)}) >> line_ending >>
+        nbytes: table_start >> line_ending >>
         ts: many0!(do_parse!(t: apply!(tablep, nbytes) >> multispace >> (t))) >>
         take_until!("*") >>
         (ts)
