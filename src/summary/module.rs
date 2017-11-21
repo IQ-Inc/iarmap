@@ -97,16 +97,13 @@ impl fmt::Display for Module {
     }
 }
 
-const MODULE_LEADING_BYTES: usize = 4;
-const MODULE_NAME_MAX_BYTES: usize = 35 - MODULE_LEADING_BYTES;
 const MODULE_DATA_SIZE_MAX_BYTES: usize = 7;
 const MODULE_DATA_SIZE_DELIMITING_BYTES: usize = 2;
-
 const RO_CODE: usize = MODULE_DATA_SIZE_MAX_BYTES;
-
-const RO_CODE_RO_DATA: usize = 2 * MODULE_DATA_SIZE_MAX_BYTES + MODULE_DATA_SIZE_DELIMITING_BYTES;
-
-const RO_CODE_RO_DATA_RW_DATA: usize = 3 * MODULE_DATA_SIZE_MAX_BYTES +
+const RO_CODE_RO_DATA: usize =
+    2 * MODULE_DATA_SIZE_MAX_BYTES + MODULE_DATA_SIZE_DELIMITING_BYTES;
+const RO_CODE_RO_DATA_RW_DATA: usize =
+    3 * MODULE_DATA_SIZE_MAX_BYTES +
     2 * MODULE_DATA_SIZE_DELIMITING_BYTES;
 
 
@@ -121,21 +118,19 @@ fn bs_to_spaceless_string(bs: &[u8]) -> Option<String> {
 }
 
 /// Parses the obj file name
-named!(_namep<&[u8], Option<String> >,
-    map!(
-        take!(MODULE_NAME_MAX_BYTES),
-        bs_to_spaceless_string
-    )
-);
+fn _namep(input: &[u8], nbytes: usize) -> IResult<&[u8], Option<String> > {
+    map!(input, take!(nbytes), bs_to_spaceless_string)
+}
 
 /// Parses the obj file name. If a table end is detected,
 /// a parser error is thrown to force a backtrack and end the
 /// parsing.
-fn namep(input: &[u8]) -> IResult<&[u8], Option<String>> {
-    let result = _namep(input);
+fn namep(input: &[u8], nbytes: usize) -> IResult<&[u8], Option<String>> {
+    let result = _namep(input, nbytes);
     match result {
         IResult::Done(rest, Some(name)) => {
-            if name.chars().filter(|c| c == &'-').count() == MODULE_NAME_MAX_BYTES {
+            let dashes: String = name.chars().filter(|c| c == &'-').collect();
+            if name.chars().filter(|c| c != &' ').collect::<String>() == dashes {
                 // Force a backtrack if a table end is detected...
                 // This is inefficient, but it gets the job done.
                 IResult::Error(ErrorKind::Custom(99))
@@ -227,33 +222,32 @@ named!(size_rowp<&[u8], Module>,
 );
 
 /// Parses the module name and sizes
-named!(modulep<&[u8], (String, Module)>,
-    do_parse!(
-        name: namep >>
+fn modulep(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)> {
+    do_parse!(input,
+        name: apply!(namep, nbytes) >>
         module: size_rowp >>
         ((name.expect("No obj file name parsed from modulep"), module))
     )
-);
+}
 
 /// Parses a complete module summary table row
-named!(table_rowp<(String, Module)>,
-    do_parse!(
-        take!(MODULE_LEADING_BYTES) >>
-        m: modulep >>
+fn table_rowp(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)>{
+    do_parse!(input,
+        m: apply!(modulep, nbytes) >>
         line_ending >>
         (m)
     )
-);
+}
 
 /// Parses all module summary table rows, and inserts the results into a HashMap
-named!(pub module_table<&[u8], HashMap<String, Module> >,
-    fold_many0!(table_rowp, HashMap::new(),
+pub fn module_table(input: &[u8], nbytes: usize) -> IResult<&[u8], HashMap<String, Module> > {
+    fold_many0!(input, apply!(table_rowp, nbytes), HashMap::new(),
         |mut hm: HashMap<_,_>, sm: (String, Module)| {
             hm.insert(sm.0, sm.1);
             hm
         }
     )
-);
+}
 
 #[cfg(test)]
 mod tests {
@@ -272,8 +266,8 @@ mod tests {
 
     #[test]
     fn test_namep() {
-        let bs = "MVC_State_Observer_Interface.o ".as_bytes();
-        let (rest, name) = namep(bs).unwrap();
+        let bs = "    MVC_State_Observer_Interface.o ".as_bytes();
+        let (rest, name) = namep(bs, 35).unwrap();
         assert_eq!(name, Some("MVC_State_Observer_Interface.o".into()));
         assert_eq!(rest, EMPTY);
     }
@@ -288,8 +282,8 @@ mod tests {
 
     #[test]
     fn test_module_all_three_values() {
-        let bs = "BigFoosBarsBaz.o                   532      569      103\n".as_bytes();
-        let (rest, namedmod) = modulep(bs).unwrap();
+        let bs = "    BigFoosBarsBaz.o                   532      569      103\n".as_bytes();
+        let (rest, namedmod) = modulep(bs, 35).unwrap();
         assert_eq!(rest, EOL);
         assert_eq!(namedmod.0, "BigFoosBarsBaz.o");
         assert_eq!(namedmod.1, Module{ ro_code: Some(532), ro_data: Some(569), rw_data: Some(103)});
@@ -297,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_module_missing_last_two() {
-        let bs = "BigFoosBarsBaz.o                   532\n".as_bytes();
+        let bs = "    BigFoosBarsBaz.o                   532\n".as_bytes();
         let expected: (String, Module) = (
             "BigFoosBarsBaz.o".into(),
             Module {
@@ -306,13 +300,13 @@ mod tests {
                 rw_data: None,
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
     #[test]
     fn test_module_missing_first_two() {
-        let bs = "BigFoosBarsBaz.o                                     103\n".as_bytes();
+        let bs = "    BigFoosBarsBaz.o                                     103\n".as_bytes();
         let expected: (String, Module) = (
             "BigFoosBarsBaz.o".into(),
             Module {
@@ -321,13 +315,13 @@ mod tests {
                 rw_data: Some(103),
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
     #[test]
     fn test_module_missing_middle() {
-        let bs = "BigFoosBarsBaz.o                   532               103\n".as_bytes();
+        let bs = "    BigFoosBarsBaz.o                   532               103\n".as_bytes();
         let expected: (String, Module) = (
             "BigFoosBarsBaz.o".into(),
             Module {
@@ -336,13 +330,13 @@ mod tests {
                 rw_data: Some(103),
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
     #[test]
     fn test_module_missing_last() {
-        let bs = "BigFoosBarsBaz.o                   166       32\n".as_bytes();
+        let bs = "    BigFoosBarsBaz.o                   166       32\n".as_bytes();
         let expected: (String, Module) = (
             "BigFoosBarsBaz.o".into(),
             Module {
@@ -351,13 +345,13 @@ mod tests {
                 rw_data: None,
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
     #[test]
     fn test_module_missing_first() {
-        let bs = "UI_AccessoryFooBar.o                      7 348      128\n".as_bytes();
+        let bs = "    UI_AccessoryFooBar.o                      7 348      128\n".as_bytes();
         let expected: (String, Module) = (
             "UI_AccessoryFooBar.o".into(),
             Module {
@@ -366,13 +360,13 @@ mod tests {
                 rw_data: Some(128),
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
     #[test]
     fn test_module_only_middle() {
-        let bs = "UI_wbstring_ENG.o                        13 172\n".as_bytes();
+        let bs = "    UI_wbstring_ENG.o                        13 172\n".as_bytes();
         let expected: (String, Module) = (
             "UI_wbstring_ENG.o".into(),
             Module {
@@ -381,7 +375,7 @@ mod tests {
                 rw_data: None,
             },
         );
-        let actual = modulep(bs);
+        let actual = modulep(bs, 35);
         assert_eq!(actual, IResult::Done(EOL, expected));
     }
 
@@ -399,7 +393,7 @@ mod tests {
             },
         );
 
-        let result = module_table(table);
+        let result = module_table(table, 35);
         assert_eq!(result, IResult::Done(EMPTY, expected));
 
     }
@@ -428,7 +422,7 @@ mod tests {
             },
         );
 
-        let result = module_table(table);
+        let result = module_table(table, 35);
         assert_eq!(result, IResult::Done(EMPTY, expected));
     }
 
@@ -465,7 +459,7 @@ mod tests {
             },
         );
 
-        let result = module_table(table);
+        let result = module_table(table, 35);
         assert_eq!(result, IResult::Done(EMPTY, expected));
     }
 
@@ -475,7 +469,7 @@ mod tests {
 
         let empty: HashMap<String, Module> = HashMap::new();
 
-        let result = module_table(table);
+        let result = module_table(table, 35);
         assert_eq!(result, IResult::Done(EMPTY, empty));
     }
 
