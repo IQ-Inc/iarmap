@@ -45,18 +45,18 @@ fn main() {
         }
     };
 
-    let left = parse_map_file(left);
-    let right = parse_map_file(right);
+    let left = parse_map_file(left).expect("Error on left file");
+    let right = parse_map_file(right).expect("Error on right file");
 
-    if let &Err(ref msg) = &left {
-        println!("Error on left file: {}", msg);
+    if left.len() < 1 {
+        println!("Error on left file: no data");
+        std::process::exit(1);
+    } else if right.len() < 1 {
+        println!("Error on right file: no data");
         std::process::exit(1);
     }
 
-    if let &Err(ref msg) = &right {
-        println!("Error on right file: {}", msg);
-        std::process::exit(1);
-    }
 
-    analyze(left.unwrap(), right.unwrap());
+
+    analyze(left, right);
 }

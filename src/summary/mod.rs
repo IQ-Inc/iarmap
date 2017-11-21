@@ -81,7 +81,7 @@ named!(table_end,
 );
 
 /// Parse module tables
-fn tablep(input: &[u8], nbytes: usize) -> IResult< &[u8], ObjModuleTable>{
+fn tablep(input: &[u8], nbytes: usize) -> IResult<&[u8], ObjModuleTable> {
     do_parse!(input,
         obj: obj_header >>
         ms: apply!(module_table, nbytes) >>

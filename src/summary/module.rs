@@ -100,10 +100,8 @@ impl fmt::Display for Module {
 const MODULE_DATA_SIZE_MAX_BYTES: usize = 7;
 const MODULE_DATA_SIZE_DELIMITING_BYTES: usize = 2;
 const RO_CODE: usize = MODULE_DATA_SIZE_MAX_BYTES;
-const RO_CODE_RO_DATA: usize =
-    2 * MODULE_DATA_SIZE_MAX_BYTES + MODULE_DATA_SIZE_DELIMITING_BYTES;
-const RO_CODE_RO_DATA_RW_DATA: usize =
-    3 * MODULE_DATA_SIZE_MAX_BYTES +
+const RO_CODE_RO_DATA: usize = 2 * MODULE_DATA_SIZE_MAX_BYTES + MODULE_DATA_SIZE_DELIMITING_BYTES;
+const RO_CODE_RO_DATA_RW_DATA: usize = 3 * MODULE_DATA_SIZE_MAX_BYTES +
     2 * MODULE_DATA_SIZE_DELIMITING_BYTES;
 
 
@@ -118,7 +116,7 @@ fn bs_to_spaceless_string(bs: &[u8]) -> Option<String> {
 }
 
 /// Parses the obj file name
-fn _namep(input: &[u8], nbytes: usize) -> IResult<&[u8], Option<String> > {
+fn _namep(input: &[u8], nbytes: usize) -> IResult<&[u8], Option<String>> {
     map!(input, take!(nbytes), bs_to_spaceless_string)
 }
 
@@ -195,8 +193,7 @@ named!(size_ro_code_ro_data_rw_data<&[u8], Module>,
 fn _size_rowp<'a>(input: &'a [u8], sizes: &[u8]) -> IResult<&'a [u8], Module> {
     let len = sizes.len();
 
-    let parser: fn(&[u8]) -> IResult<&[u8], Module> =
-    if len == RO_CODE {
+    let parser: fn(&[u8]) -> IResult<&[u8], Module> = if len == RO_CODE {
         size_ro_code
     } else if len == RO_CODE_RO_DATA {
         size_ro_code_ro_data
@@ -231,7 +228,7 @@ fn modulep(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)> {
 }
 
 /// Parses a complete module summary table row
-fn table_rowp(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)>{
+fn table_rowp(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)> {
     do_parse!(input,
         m: apply!(modulep, nbytes) >>
         line_ending >>
@@ -240,7 +237,7 @@ fn table_rowp(input: &[u8], nbytes: usize) -> IResult<&[u8], (String, Module)>{
 }
 
 /// Parses all module summary table rows, and inserts the results into a HashMap
-pub fn module_table(input: &[u8], nbytes: usize) -> IResult<&[u8], HashMap<String, Module> > {
+pub fn module_table(input: &[u8], nbytes: usize) -> IResult<&[u8], HashMap<String, Module>> {
     fold_many0!(input, apply!(table_rowp, nbytes), HashMap::new(),
         |mut hm: HashMap<_,_>, sm: (String, Module)| {
             hm.insert(sm.0, sm.1);
