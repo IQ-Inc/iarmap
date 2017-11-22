@@ -79,7 +79,9 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
     }
 
     let mut no_difference = true;
-    for obj in lkeys.intersection(&rkeys) {
+    let mut intersect: Vec<_> = lkeys.intersection(&rkeys).collect();
+    intersect.sort();
+    for obj in intersect {
         let l = left.get(*obj);
         let r = right.get(*obj);
 
