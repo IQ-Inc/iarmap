@@ -21,7 +21,7 @@ use std::fmt;
 /// let a = Module{ ro_code: Some(10), ro_data: None, rw_data: Some(20) };
 /// let b = Module{ ro_code: Some(5), ro_data: Some(4), rw_data: Some(11) };
 ///
-/// let expected = Module{ ro_code: Some(5), ro_data: None, rw_data: Some(9) };
+/// let expected = Module{ ro_code: Some(5), ro_data: Some(-4), rw_data: Some(9) };
 /// assert_eq!(a - b, expected);
 /// ```
 ///
@@ -50,12 +50,15 @@ impl Module {
     }
 }
 
-/// Subtract two optional values iff both values exist.
+/// Subtract two optional values, counting None as "0" if the other value is
+/// Some(v)
 #[inline]
 fn optional_diff(left: Option<i32>, right: Option<i32>) -> Option<i32> {
     match (left, right) {
         (Some(l), Some(r)) => Some(l - r),
-        _ => None,
+        (Some(l), None) => Some(l),
+        (None, Some(r)) => Some(-r),
+        (None, None) => None
     }
 }
 
