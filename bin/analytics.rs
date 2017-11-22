@@ -64,7 +64,7 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         diff.sort();
         for unique in diff {
             println!("\tL- {}", unique);
-            println!("\t\t{}", left.get(*unique).unwrap());
+            println!("\t   {}", left.get(*unique).unwrap());
         }
 
         println!("Objects unique to right...");
@@ -72,7 +72,7 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         diff.sort();
         for unique in diff {
             println!("\tR- {}", unique);
-            println!("\t\t{}", right.get(*unique).unwrap());
+            println!("\t   {}", right.get(*unique).unwrap());
         }
     } else {
         println!("No unique objects between left and right");
@@ -90,9 +90,9 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
 
             no_difference = false;
             println!("Difference in {}...", obj);
-            println!("\t L- {}", l);
-            println!("\t R- {}", r);
-            println!("\t D- {}", *l - *r);
+            println!("\tL- {}", l);
+            println!("\tR- {}", r);
+            println!("\tD- {}", *l - *r);
         }
     }
 
