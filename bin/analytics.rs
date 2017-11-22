@@ -64,6 +64,7 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         diff.sort();
         for unique in diff {
             println!("\tL- {}", unique);
+            println!("\t   {}", left.get(*unique).unwrap());
         }
 
         println!("Objects unique to right...");
@@ -71,13 +72,16 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         diff.sort();
         for unique in diff {
             println!("\tR- {}", unique);
+            println!("\t   {}", right.get(*unique).unwrap());
         }
     } else {
         println!("No unique objects between left and right");
     }
 
     let mut no_difference = true;
-    for obj in lkeys.intersection(&rkeys) {
+    let mut intersect: Vec<_> = lkeys.intersection(&rkeys).collect();
+    intersect.sort();
+    for obj in intersect {
         let l = left.get(*obj);
         let r = right.get(*obj);
 
@@ -88,9 +92,9 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
 
             no_difference = false;
             println!("Difference in {}...", obj);
-            println!("\t L- {}", l);
-            println!("\t R- {}", r);
-            println!("\t D- {}", *l - *r);
+            println!("\tL- {}", l);
+            println!("\tR- {}", r);
+            println!("\tD- {}", *l - *r);
         }
     }
 
