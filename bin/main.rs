@@ -9,6 +9,7 @@
 //! iarmapcmp.exe [left-map-file] [right-map-file]
 //! ```
 
+extern crate colored;
 extern crate iarmap;
 
 mod analytics;

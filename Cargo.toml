@@ -5,6 +5,7 @@ authors = ["Ian McIntyre <me@ianpmcintyre.com>"]
 
 [dependencies]
 nom = "3.2.0"
+colored = "1.6"
 
 [lib]
 name = "iarmap"

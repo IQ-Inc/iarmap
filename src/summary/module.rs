@@ -48,6 +48,14 @@ impl Module {
             )
         })
     }
+
+    /// Converts the module code size to a string
+    pub fn size_to_string(size: Option<i32>) -> String {
+            match size {
+                Some(v) => format!("{num:>width$}", num = v, width = 6),
+                None => "------".into(),
+        }
+    }   
 }
 
 /// Subtract two optional values, counting None as "0" if the other value is
@@ -76,20 +84,11 @@ impl Sub for Module {
     }
 }
 
-/// Format an optional number as a string. Describes the pretty-print format.
-#[inline]
-fn size_to_string(opt: Option<i32>) -> String {
-    match opt {
-        Some(v) => format!("{num:>width$}", num = v, width = 6),
-        None => "------".into(),
-    }
-}
-
 impl fmt::Display for Module {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ro_code: String = size_to_string(self.ro_code);
-        let ro_data: String = size_to_string(self.ro_data);
-        let rw_data: String = size_to_string(self.rw_data);
+        let ro_code: String = Module::size_to_string(self.ro_code);
+        let ro_data: String = Module::size_to_string(self.ro_data);
+        let rw_data: String = Module::size_to_string(self.rw_data);
         write!(
             f,
             "ro_code: {} \t ro_data: {} \t rw_data: {}",

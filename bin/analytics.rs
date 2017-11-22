@@ -1,10 +1,51 @@
 //! The analytics module implements module summary analytics
 
+use colored::*;
+
 use iarmap::Module;
 use iarmap::ObjModuleTable;
 
 use std::collections::HashSet;
 use std::collections::HashMap;
+
+use std::fmt;
+
+/// ColoredDiffModule wraps a Module for showing with colored formatting.
+/// The wrapper is used when showing the delta between two modules.
+struct ColoredDiffModule {
+    m: Module
+}
+
+impl fmt::Display for ColoredDiffModule {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+
+        let painter = |size: Option<i32>| -> ColoredString {
+            match size {
+                None => Module::size_to_string(size).normal(),
+                Some(v) => {
+                    if v < 0 {
+                        Module::size_to_string(size).red()
+                    } else if v > 0 {
+                        Module::size_to_string(size).green()
+                    } else {
+                        Module::size_to_string(size).normal()
+                    }
+                }
+            }
+        };
+
+        let ro_code: ColoredString = painter(self.m.ro_code);
+        let ro_data: ColoredString = painter(self.m.ro_data);
+        let rw_data: ColoredString = painter(self.m.rw_data);
+        write!(
+            f,
+            "ro_code: {} \t ro_data: {} \t rw_data: {}",
+            ro_code,
+            ro_data,
+            rw_data
+        )
+    }
+}
 
 /// Run analytics on the left and right module summary tables
 pub fn analyze(left: Vec<ObjModuleTable>, right: Vec<ObjModuleTable>) {
@@ -38,14 +79,14 @@ fn show_module_differences(left: &Vec<ObjModuleTable>, right: &Vec<ObjModuleTabl
         let mut diff = left.difference(&right).collect::<Vec<_>>();
         diff.sort();
         for unique in diff {
-            println!("\tL- {}", unique);
+            println!("\tL- {}", unique.magenta());
         }
 
         println!("Modules unique to right...");
         let mut diff = right.difference(&left).collect::<Vec<_>>();
         diff.sort();
         for unique in diff {
-            println!("\tR- {}", unique);
+            println!("\tR- {}", unique.yellow());
         }
     } else {
         println!("No module differences");
@@ -63,7 +104,7 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         let mut diff = lkeys.difference(&rkeys).collect::<Vec<_>>();
         diff.sort();
         for unique in diff {
-            println!("\tL- {}", unique);
+            println!("\tL- {}", unique.magenta());
             println!("\t   {}", left.get(*unique).unwrap());
         }
 
@@ -71,7 +112,7 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
         let mut diff = rkeys.difference(&lkeys).collect::<Vec<_>>();
         diff.sort();
         for unique in diff {
-            println!("\tR- {}", unique);
+            println!("\tR- {}", unique.yellow());
             println!("\t   {}", right.get(*unique).unwrap());
         }
     } else {
@@ -91,10 +132,10 @@ fn compare_objects(left: &HashMap<String, Module>, right: &HashMap<String, Modul
             }
 
             no_difference = false;
-            println!("Difference in {}...", obj);
+            println!("Difference in {}...", obj.cyan());
             println!("\tL- {}", l);
             println!("\tR- {}", r);
-            println!("\tD- {}", *l - *r);
+            println!("\tD- {}", ColoredDiffModule{ m: *l - *r });
         }
     }
 
